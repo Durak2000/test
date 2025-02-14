@@ -1,2 +1,47 @@
+from random import randint
+import time
+from bs4 import BeautifulSoup
+from loguru import logger
+import requests
+
+import novel
+
+
 class Parser:
-    pass
+    def __init__(self, title, url):
+        self.title = title
+        self.url = url
+        self.chapter = 1
+        self.chapters = {}
+
+    def get_novel(self):
+        soup = self.get_wabpage(self.url)
+        chapters_list = soup.find('ul', class_='list clearfix')
+        elements = chapters_list.find_all('a')
+        links - []
+        for element in elements:
+            href = element.get('href')
+            if href:
+                links.append(href)
+
+        for link in links:
+            chapters_page = self.get_wabpage(link)
+            text = chapters_page.find('div', class_='book_con fix')
+            self.chapters.update({str(self.chapter): link + text.text})
+            self.chapter += 1
+            time.sleep(randint(1, 7))
+            logger.info(f'chapter {self.chapter} for link {link} is got')
+
+        novel = Novel(self.title)
+        logger.info(f'novel is created {self.title}')
+        novel.write_novel_to_db(self.chapters)
+        logger.info(f'novel is written to the json {self.title}')
+
+    def get_wabpage(self, link):
+        response = requests.get(link)
+        if response.status_code == 200:
+            response.encoding = response.apparent_encoding
+            logger.info(f'page {link} is got')
+            return BeautifulSoup(response.text, 'html.parser')
+        else:
+            logger.error(f'page {link} is not got {response.status_code}')
